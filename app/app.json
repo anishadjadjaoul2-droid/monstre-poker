@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Monstre Poker",
+    "slug": "monstre-poker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tonorga.monstrepoker"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.tonorga.monstrepoker"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,13 +36,6 @@
     "owner": "anishdja"
   }
 }
-{
-  "expo": {
-    "name": "Monstre Poker",
-    "slug": "monstre-poker",
-    "ios":    { "bundleIdentifier": "com.tonorga.monstrepoker" },
-    "android":{ "package":          "com.tonorga.monstrepoker" }
-  }
-}
+
 
 

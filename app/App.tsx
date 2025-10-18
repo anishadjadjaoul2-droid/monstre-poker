@@ -3,7 +3,7 @@ import { SafeAreaView, View, Text, TextInput, Pressable, Alert, Platform, Scroll
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { computeDecision, HandState } from '/workspaces/monstre-poker/app/assets/src/src/engine';
+import { computeDecision, HandState } from './src/engine';
 
 const ENTITLEMENT_ID = 'monstre_pro';
 const HANDS_TRIAL = 7;
