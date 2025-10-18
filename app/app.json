@@ -34,4 +34,13 @@
     "owner": "anishdja"
   }
 }
+{
+  "expo": {
+    "name": "Monstre Poker",
+    "slug": "monstre-poker",
+    "ios":    { "bundleIdentifier": "com.tonorga.monstrepoker" },
+    "android":{ "package":          "com.tonorga.monstrepoker" }
+  }
+}
+
 
