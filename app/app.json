@@ -25,6 +25,9 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.tonorga.monstrepoker"
     },
+    "plugins": [
+      "react-native-purchases"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -36,15 +39,5 @@
     "owner": "anishdja"
   }
 }
-
-{
-  "expo": {
-    "name": "Monstre Poker",
-    "slug": "app",
-    "...": "...",
-    "plugins": ["react-native-purchases"]
-  }
-}
-
 
 
