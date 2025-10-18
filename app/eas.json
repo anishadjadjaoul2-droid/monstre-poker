@@ -6,3 +6,12 @@
   },
   "submit": { "production": {} }
 }
+
+{
+  "cli": { "version": ">= 7.3.0", "appVersionSource": "remote" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal" },
+    "production":   { "android": { "buildType": "app-bundle" } }
+  },
+  "submit": { "production": {} }
+}

@@ -161,6 +161,11 @@ const styles = {
   btnOutlineTxt: { color: '#111827', fontWeight: '700' },
   link: { justifyContent:'center', paddingHorizontal: 6 }
 } as const;
+Purchases.configure({
+  apiKey: Platform.OS === 'ios'
+    ? 'appl_xxx_ta_cle_publique_ios'      // laisse un placeholder si tu n'as pas iOS
+    : 'goog_xxx_ta_cle_publique_android'  // <-- colle ici la clé publique Android RevenueCat
+});
 
 
 
