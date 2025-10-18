@@ -20,24 +20,4 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.tonorga.monstrepoker"
-    },
-    "plugins": [
-      "react-native-purchases"
-    ],
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "637678e6-161e-4e1c-a928-52b6fbdbda31"
-      }
-    },
-    "owner": "anishdja"
-  }
-}
-
 
