@@ -1,0 +1,116 @@
+cd /workspaces/monstre-poker
+
+# Vérifie la présence du dossier GitHub Pages
+[ -d docs ] || mkdir docs
+
+# Crée/écrase la page de suppression robuste
+cat > docs/delete.html <<'HTML'
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Suppression de compte – Monstre Poker</title>
+  <style>
+    :root{--fg:#111827;--muted:#6b7280;}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:var(--fg);max-width:900px;margin:32px auto;padding:0 16px}
+    h1{font-size:1.8rem;margin:.2rem 0 1rem}
+    p,li{margin:.4rem 0}
+    .muted{color:var(--muted)}
+    .box{background:#fafafa;border:1px solid #eee;border-radius:10px;padding:12px}
+    a.button{display:inline-block;padding:10px 14px;border-radius:10px;border:2px solid #111827;text-decoration:none;color:#111827;font-weight:700}
+    input,textarea{padding:10px;border-radius:10px;border:1px solid #e5e7eb;width:100%;max-width:420px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    small{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <h1>Suppression de compte</h1>
+  <p class="muted">Dernière mise à jour : 19 octobre 2025</p>
+
+  <p>Vous pouvez demander la suppression définitive de votre compte <strong>Monstre Poker</strong> (email, prénom, nom, âge et droits d’accès). La suppression est irréversible.</p>
+
+  <div class="box">
+    <h3>1) Demande par e-mail (recommandée)</h3>
+    <p>Entrez l’adresse utilisée dans l’application puis cliquez sur “Demander la suppression”.</p>
+    <div class="row">
+      <input id="em" type="email" placeholder="votre.email@example.com" autocomplete="email" />
+      <a id="mailto" class="button" href="#">Demander la suppression</a>
+    </div>
+    <p><small>Si aucun client e-mail n’est configuré sur votre appareil, utilisez le lien direct ci-dessous ou copiez le message.</small></p>
+    <p>Adresse de contact : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a></p>
+
+    <details>
+      <summary>Voir / copier le message</summary>
+      <textarea id="tpl" rows="6">Bonjour,
+
+Je souhaite supprimer mon compte Monstre Poker.
+
+Adresse e-mail utilisée : 
+
+Je comprends que cette suppression est définitive.
+
+Merci.
+      </textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="copy" type="button">Copier le message</button>
+      </div>
+    </details>
+  </div>
+
+  <h3>2) Délai et effets</h3>
+  <ul>
+    <li>Suppression sous 30 jours maximum (souvent bien plus tôt).</li>
+    <li>La suppression retire votre profil et votre accès PRO. Les reçus d’achat peuvent être conservés par Google/RevenueCat pour obligations légales.</li>
+  </ul>
+
+  <p>Pour toute question : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a>.</p>
+
+  <noscript>
+    <p><strong>Astuce :</strong> JavaScript est désactivé. Envoyez un e-mail à
+      <a href="mailto:anishadjadjaoul2@yahoo.fr?subject=Demande%20de%20suppression%20de%20compte%20Monstre%20Poker">anishadjadjaoul2@yahoo.fr</a>
+      avec l’objet “Demande de suppression de compte Monstre Poker”.</p>
+  </noscript>
+
+  <script>
+    const to = 'anishadjadjaoul2@yahoo.fr';
+    const em = document.getElementById('em');
+    const a = document.getElementById('mailto');
+    const tpl = document.getElementById('tpl');
+    const copyBtn = document.getElementById('copy');
+
+    const subject = encodeURIComponent('Demande de suppression de compte Monstre Poker');
+    const buildBody = (addr) => encodeURIComponent(
+      'Bonjour,\\n\\nJe souhaite supprimer mon compte Monstre Poker.\\n\\n' +
+      'Adresse e-mail utilisée : ' + (addr || '') + '\\n\\n' +
+      'Je comprends que cette suppression est définitive.\\n\\nMerci.'
+    );
+    function updateLink(){
+      const addr = (em.value || '').trim();
+      a.href = `mailto:${to}?subject=${subject}&body=${buildBody(addr)}`;
+    }
+    em.addEventListener('input', updateLink);
+    updateLink();
+
+    a.addEventListener('click', (e) => {
+      // on laisse le lien mailto se comporter normalement
+      // certains navigateurs requièrent un client e-mail configuré
+    });
+
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(tpl.value);
+        copyBtn.textContent = 'Copié ✔';
+        setTimeout(() => (copyBtn.textContent = 'Copier le message'), 1200);
+      } catch(e) {
+        alert('Impossible de copier automatiquement. Sélectionnez et copiez manuellement le texte.');
+      }
+    });
+  </script>
+</body>
+</html>
+HTML
+
+git add docs/delete.html
+git commit -m "docs: URL de suppression de compte robuste (mailto + fallback)"
+git push
