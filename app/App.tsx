@@ -6,6 +6,8 @@ import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
 import { computeDecision, HandState } from './src/engine';
 import AuthScreen from './src/AuthScreen';
 import { supabase } from './src/supabase';
+import TableScreen from './src/screens/TableScreen';
+
 
 const ENTITLEMENT_ID = 'monstre_pro';
 const HANDS_TRIAL = 7;
@@ -149,10 +151,13 @@ export default function App() {
 
   // Écran d’auth si pas connecté
   if (!sessionReady) return null;
-  if (!userId) return <AuthScreen onDone={async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setUserId(session?.user?.id ?? null);
-  }} />;
+if (!userId) return <AuthScreen onDone={async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  setUserId(session?.user?.id ?? null);
+}} />;
+
+// Ici on affiche la table simple
+return <TableScreen />;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>

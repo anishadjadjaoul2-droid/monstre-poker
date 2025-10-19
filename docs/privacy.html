@@ -1,3 +1,6 @@
+cd /workspaces/monstre-poker
+mkdir -p docs
+cat > docs/privacy.html <<'HTML'
 <!doctype html>
 <html lang="fr">
 <head>
@@ -10,7 +13,7 @@
     h1{font-size:1.8rem;margin:.2rem 0 1rem}
     h2{margin:2rem 0 .4rem;font-size:1.2rem}
     p,li{margin:.4rem 0}
-    small, .muted{color:var(--muted)}
+    .muted{color:var(--muted)}
     code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
     a{color:#0b67ff}
     ul{padding-left:1.2rem}
@@ -22,54 +25,74 @@
   <h1>Politique de confidentialité</h1>
   <p class="muted">Dernière mise à jour : 19 octobre 2025</p>
 
-  <p><strong>Monstre Poker</strong> est une application d’entraînement au poker (outil éducatif, sans jeu d’argent réel). Cette politique explique quelles données sont traitées, par qui, dans quel but et quels sont vos droits.</p>
+  <p><strong>Monstre Poker</strong> est une application d’entraînement au poker (outil éducatif, sans jeu d’argent réel). Cette politique explique quelles données nous traitons, pour quelles finalités, sur quelle base légale, avec qui et combien de temps.</p>
 
-  <h2>1) Qui est le responsable ?</h2>
-  <p>Responsable du traitement : <strong>Anish Dja</strong> — <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a></p>
+  <h2>1) Responsable du traitement</h2>
+  <p><strong>Anish Dja</strong><br>
+  Contact : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a><br>
+  Application : Monstre Poker – Package Android : <code>com.tonorga.monstrepoker</code></p>
 
-  <h2>2) Quelles données sont traitées ?</h2>
+  <h2>2) Données que nous traitons</h2>
   <ul>
-    <li><strong>Achats intégrés (Google Play Billing)</strong> : Google Play traite les informations liées à l’achat (identifiant d’achat, état, pays de facturation, etc.).</li>
-    <li><strong>Vérification de licence via RevenueCat</strong> : pour activer l’accès PRO, RevenueCat reçoit des <em>identifiants techniques</em> (identifiant d’instance d’appareil/app) et l’<em>historique d’achats</em> correspondant. Ces données servent uniquement à vérifier votre droit d’accès.</li>
-    <li><strong>Données locales</strong> : compteur d’essai “7 mains” et préférences, stockés <em>uniquement</em> sur l’appareil.</li>
+    <li><strong>Création de compte</strong> (obligatoire pour utiliser l’app) : adresse email, prénom, nom, âge (déclaratif &ge; 18).</li>
+    <li><strong>Achats intégrés</strong> (Google Play Billing) : Google traite les infos liées aux achats (identifiant d’achat, statut, pays/billing). Nous recevons via RevenueCat des informations de validation de licence associées à votre utilisateur.</li>
+    <li><strong>Vérification d’accès PRO via RevenueCat</strong> : identifiants techniques (p. ex. identifiant d’instance/appareil) et historique d’achats correspondant, uniquement pour activer votre droit d’accès PRO.</li>
+    <li><strong>Données locales sur l’appareil</strong> : compteur d’essai « 7 mains » et préférences – stockés localement, non transmis au développeur.</li>
+    <li><strong>Support</strong> (si contact par email) : contenu de votre message et adresse d’expéditeur.</li>
   </ul>
-
-  <div class="box"><strong>Aucune publicité ni traque publicitaire.</strong> L’app ne contient pas de SDK d’annonces et ne fait pas de profilage publicitaire.</div>
+  <div class="box"><strong>Publicités :</strong> l’application ne contient pas de publicité et ne réalise pas de profilage publicitaire.</div>
 
   <h2>3) Finalités et bases légales</h2>
   <ul>
-    <li><strong>Fourniture du service</strong> (déverrouiller PRO après achat) : exécution du contrat.</li>
-    <li><strong>Lutte contre la fraude & support</strong> : intérêt légitime.</li>
-    <li><strong>Obligations légales</strong> : conservation comptable côté stores.</li>
+    <li><strong>Fourniture du service</strong> (création de compte, accès, déverrouillage PRO après achat) – <em>exécution du contrat</em>.</li>
+    <li><strong>Gestion des achats & lutte antifraude</strong> (vérification de licence, prévention d’abus) – <em>intérêt légitime</em>.</li>
+    <li><strong>Obligations légales</strong> (tenue de registres par les stores) – <em>obligation légale</em>.</li>
   </ul>
 
-  <h2>4) Destinataires / sous-traitants</h2>
+  <h2>4) Prestataires / destinataires</h2>
   <ul>
-    <li><strong>Google Play</strong> (Google Ireland Ltd.) : paiements in-app.</li>
-    <li><strong>RevenueCat</strong> (RevenueCat, Inc., USA) : gestion des droits d’accès PRO (entitlements).</li>
+    <li><strong>Google Play</strong> (Google Ireland Ltd.) – traitement des paiements in-app et distribution.</li>
+    <li><strong>RevenueCat</strong> (RevenueCat, Inc., USA) – gestion des droits d’accès (entitlements) selon votre achat.</li>
+    <li><strong>Supabase</strong> (Supabase, Inc.) – authentification et base de données (compte/profil utilisateur).</li>
   </ul>
-  <p>Des transferts hors UE peuvent avoir lieu (ex. USA). RevenueCat applique des garanties (clauses contractuelles types). Politiques : <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat</a>, <a href="https://policies.google.com/privacy?hl=fr" target="_blank" rel="noopener">Google</a>.</p>
+  <p>Chaque prestataire opère selon sa propre politique : 
+    <a href="https://policies.google.com/privacy?hl=fr" target="_blank" rel="noopener">Google</a>, 
+    <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat</a>, 
+    <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>.
+  </p>
 
-  <h2>5) Durées de conservation</h2>
+  <h2>5) Transferts hors UE</h2>
+  <p>Certains prestataires peuvent traiter des données hors de l’UE (ex. USA). Des garanties appropriées sont mises en place (notamment <em>clauses contractuelles types</em>). Pour plus d’informations, consultez leurs politiques.</p>
+
+  <h2>6) Durées de conservation</h2>
   <ul>
-    <li>Données locales : supprimées en désinstallant l’app ou en vidant les données.</li>
-    <li>Infos achat/licence : conservées par Google/RevenueCat aussi longtemps que nécessaire pour prouver/maintenir votre droit d’accès et respecter la loi.</li>
+    <li><strong>Compte/profil</strong> : tant que le compte est actif, puis suppression/archivage selon obligations légales.</li>
+    <li><strong>Infos d’achat / licence</strong> : conservées par Google/RevenueCat aussi longtemps que nécessaire pour prouver et maintenir le droit d’accès et répondre aux obligations légales.</li>
+    <li><strong>Données locales</strong> (compteur d’essai, préférences) : restent sur votre appareil et disparaissent lors de la désinstallation ou de l’effacement des données.</li>
+    <li><strong>Support</strong> : durée nécessaire au traitement, puis suppression.</li>
   </ul>
 
-  <h2>6) Vos droits (RGPD)</h2>
-  <p>Vous disposez des droits d’accès, rectification, effacement, limitation, opposition et portabilité (dans les limites légales). Contact : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a>. Pour les données gérées par Google Play ou RevenueCat, nous pourrons vous demander l’ID d’achat.</p>
-
-  <h2>7) Enfants</h2>
-  <p>L’app s’adresse à des <strong>adultes (18+)</strong>.</p>
+  <h2>7) Vos droits</h2>
+  <p>Vous disposez des droits d’accès, de rectification, d’effacement, de limitation, d’opposition et de portabilité, dans les limites du RGPD. Pour exercer vos droits, contactez : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a>. Une preuve d’achat (ID de commande) peut être demandée pour les demandes liées aux licences.</p>
 
   <h2>8) Sécurité</h2>
-  <p>Les communications avec les services tiers sont chiffrées. L’app ne maintient pas de base de données personnelle côté serveur.</p>
+  <p>Les communications avec nos prestataires sont chiffrées en transit. Nous ne maintenons pas de base de données personnelle propre côté serveur en dehors des services listés ci-dessus.</p>
 
-  <h2>9) Modifications</h2>
-  <p>Cette politique peut évoluer. La date en tête sera mise à jour.</p>
+  <h2>9) Mineurs</h2>
+  <p>L’application s’adresse à des <strong>adultes (18+)</strong>. Nous ne collectons pas sciemment de données d’enfants.</p>
+
+  <h2>10) Contact</h2>
+  <p>Pour toute question, demande d’exercice de droits ou suppression de compte : <a href="mailto:anishadjadjaoul2@yahoo.fr">anishadjadjaoul2@yahoo.fr</a>.</p>
+
+  <h2>11) Modifications</h2>
+  <p>Nous pouvons mettre à jour cette politique pour des raisons légales ou techniques. La date de mise à jour sera ajustée et la nouvelle version publiée sur cette page.</p>
 
   <hr>
-  <p class="muted">Application : Monstre Poker • Package Android : <code>com.tonorga.monstrepoker</code></p>
+  <p class="muted">© Monstre Poker — Politique de confidentialité.</p>
 </body>
 </html>
+HTML
 
+git add docs/privacy.html
+git commit -m "docs: mise à jour Politique de confidentialité (compte + achats + RC + Supabase)"
+git push
