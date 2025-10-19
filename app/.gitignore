@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+printf "\napp/.env\n" >> ../.gitignore
+git add ../.gitignore app/.env
+git commit -m "chore: supabase env"
+git push
+

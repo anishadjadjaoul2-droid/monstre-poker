@@ -167,6 +167,64 @@ Purchases.configure({
     : 'goog_xxx_ta_cle_publique_android'  // <-- colle ici la clé publique Android RevenueCat
 });
 
+import { useEffect, useState } from 'react';
+import { supabase } from './src/supabase';
+import AuthScreen from './src/AuthScreen';
+import Purchases from 'react-native-purchases'; // déjà installé
+
+export default function App() {
+  const [sessionReady, setSessionReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // 1) Session Supabase
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUserId(data.session?.user?.id ?? null);
+      setSessionReady(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, ses) => {
+      setUserId(ses?.user?.id ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // 2) Lier RevenueCat à l'utilisateur
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        await Purchases.logIn(userId);   // entitlements liés à cet ID
+      } catch {}
+    })();
+  }, [userId]);
+
+  if (!sessionReady) return null; // splash natif d’Expo
+  if (!userId) return <AuthScreen onDone={async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setUserId(session?.user?.id ?? null);
+  }} />;
+
+  // ... en-dessous on garde TON écran d’entraînement existant
+  // et on remplace la logique "7 mains" pour la stocker serveur (voir Étape 6)
+  return (/* ton UI actuelle */);
+}
+
+import { getHandsUsed, incHandsUsed } from './src/trial';
+
+const HANDS_TRIAL = 7;
+
+// ... quand l'utilisateur clique "Décider cette main"
+const used = await getHandsUsed();
+if (!isPro && used >= HANDS_TRIAL) {
+  // ouvre le paywall
+  return;
+}
+// après avoir rendu la décision :
+if (!isPro) {
+  const newUsed = await incHandsUsed();
+  setHandsLeft(Math.max(0, HANDS_TRIAL - newUsed));
+}
+
 
 
 
