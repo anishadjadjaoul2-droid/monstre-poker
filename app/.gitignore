@@ -45,3 +45,5 @@ git add ../.gitignore app/.env
 git commit -m "chore: supabase env"
 git push
 
+
+keys/
