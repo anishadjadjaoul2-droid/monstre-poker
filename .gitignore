@@ -1,0 +1,4 @@
+
+# Expo local state (app)
+app/.expo/
+app/keys/
