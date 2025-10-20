@@ -1,211 +1,196 @@
-// app/App.tsx
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, Alert, Platform, ScrollView } from 'react-native';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
-import { computeDecision, HandState } from './src/engine';
-import AuthScreen from './src/AuthScreen';
-import { supabase } from './src/supabase';
-import TableScreen from './src/screens/TableScreen';
+import React, { useMemo, useState } from "react";
+import { SafeAreaView, View, Text, TextInput, Pressable, ScrollView, Linking, Platform } from "react-native";
+import TableScreen from "./src/screens/TableScreen";
 
+// Palette commune (identique aux maquettes)
+const COLORS = {
+  bg: "#F5F7FA",
+  dark: "#111827",
+  muted: "#788390",
+  green: "#07B36E",
+  teal: "#0E5466",
+  blue: "#1A568B",
+  white: "#ffffff",
+  fieldBorder: "#E6EBF0",
+};
 
-const ENTITLEMENT_ID = 'monstre_pro';
-const HANDS_TRIAL = 7;
-
-// --- Helpers essai par utilisateur (Supabase) ---
-async function getHandsUsed(): Promise<number> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
-  const { data } = await supabase.from('profiles').select('hands_used').eq('id', user.id).single();
-  return data?.hands_used ?? 0;
-}
-async function incHandsUsed(): Promise<number> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
-
-  // 1) Essaye la RPC (recommandé)
-  const rpc = await supabase.rpc('inc_hands_used', { uid: user.id });
-  if (!rpc.error && typeof rpc.data === 'number') {
-    return rpc.data as number;
-  }
-
-  // 2) Fallback: update manuel
-  const { data: current } = await supabase
-    .from('profiles').select('hands_used').eq('id', user.id).single();
-  const next = (current?.hands_used ?? 0) + 1;
-  await supabase.from('profiles').update({ hands_used: next }).eq('id', user.id);
-  return next;
-}
-
-// --- Clé publique RevenueCat (remplace si besoin par les tiennes) ---
-const RC_KEY = Platform.select({
-  ios:    'appl_YOUR_IOS_PUBLIC_KEY',
-  android:'goog_YOUR_ANDROID_PUBLIC_KEY',
-})!;
+type Route = "auth" | "table";
 
 export default function App() {
-  // Auth / RC
-  const [sessionReady, setSessionReady] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isPro, setPro] = useState(false);
+  const [route, setRoute] = useState<Route>("auth");
 
-  // UI / logique poker
-  const [isLoading, setLoading] = useState(false);
-  const [handsLeft, setHandsLeft] = useState<number>(HANDS_TRIAL);
-  const [players, setPlayers] = useState('3');
-  const [stackBB, setStackBB] = useState('25');
-  const [bbSize, setBbSize] = useState('100');
-  const [cards, setCards] = useState('Ah7s');
-  const [lastDecision, setLastDecision] = useState('');
-
-  // 1) Session Supabase
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user?.id ?? null);
-      setSessionReady(true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, ses) => {
-      setUserId(ses?.user?.id ?? null);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-  Purchases.setLogLevel(LOG_LEVEL.INFO);
-  Purchases.configure({ apiKey: RC_KEY });
-
-  Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
-    const active = info.entitlements.active[ENTITLEMENT_ID];
-    setPro(!!active);
+  // “Etat global” minimal
+  const [user, setUser] = useState({
+    email: "",
+    first: "",
+    last: "",
+    age: "",
   });
+  const [isPro, setIsPro] = useState(false);
+  const [handsUsed, setHandsUsed] = useState(0);
 
-  (async () => {
-    try {
-      const info = await Purchases.getCustomerInfo();
-      const active = info.entitlements.active[ENTITLEMENT_ID];
-      setPro(!!active);
-    } catch {}
-  })();
+  const canCreate = useMemo(() => {
+    const ok =
+      user.email.includes("@") &&
+      user.first.trim().length > 0 &&
+      user.last.trim().length > 0 &&
+      /^\d+$/.test(user.age) &&
+      Number(user.age) >= 18;
+    return ok;
+  }, [user]);
 
-  // pas de remove() typé -> cleanup no-op
-  return () => {};
-}, []);
+  if (route === "auth") {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <ScrollView contentContainerStyle={{ padding: 24 }}>
+          {/* “Barre” style maquette */}
+          <View style={{ height: 80, backgroundColor: COLORS.white, borderRadius: 8, marginBottom: 24, justifyContent: "center" }}>
+            <Text style={{ color: COLORS.dark, fontSize: 18, marginLeft: 16 }}>Monstre Poker — Créer un compte</Text>
+          </View>
 
-  // 3) Lier l’utilisateur RC + charger compteur d’essai
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      try { await Purchases.logIn(userId); } catch {}
-      const used = await getHandsUsed();
-      setHandsLeft(Math.max(0, HANDS_TRIAL - used));
-    })();
-  }, [userId]);
+          {/* Logo carré teal */}
+          <View style={{ alignSelf: "center", width: 200, height: 260, backgroundColor: COLORS.teal, borderRadius: 32, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 72, color: COLORS.white }}>🂠</Text>
+          </View>
 
-  const openPaywall = useCallback(async () => {
-    try {
-      const result = await RevenueCatUI.presentPaywall();
-      if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-        const info = await Purchases.getCustomerInfo();
-        setPro(!!info.entitlements.active[ENTITLEMENT_ID]);
-      }
-    } catch (e: any) {
-      Alert.alert('Achat', e?.message ?? 'Impossible d’ouvrir le paywall');
-    }
-  }, []);
+          <Text style={{ marginTop: 24, fontSize: 34, fontWeight: "700", color: COLORS.dark, textAlign: "center" }}>
+            Monstre Poker
+          </Text>
 
-  const decide = useCallback(async () => {
-    try {
-      setLoading(true);
+          {/* Onglets stylés (maquette) */}
+          <View style={{ marginTop: 24, flexDirection: "row", gap: 12, alignSelf: "center" }}>
+            <PillBtn label="Connexion" onPress={() => {}} inverted />
+            <PillBtn label="Créer un compte" onPress={() => {}} />
+          </View>
 
-      // essai / paywall
-      if (!isPro) {
-        const used = await getHandsUsed();
-        if (used >= HANDS_TRIAL) {
-          setHandsLeft(0);
-          await openPaywall();
-          setLoading(false);
-          return;
-        }
-      }
+          {/* Champs */}
+          <View style={{ marginTop: 24, gap: 16 }}>
+            <Field value={user.email} placeholder="Adresse e-mail" onChangeText={(v) => setUser((s) => ({ ...s, email: v }))} />
+            <Field value={user.first} placeholder="Prénom" onChangeText={(v) => setUser((s) => ({ ...s, first: v }))} />
+            <Field value={user.last} placeholder="Nom" onChangeText={(v) => setUser((s) => ({ ...s, last: v }))} />
+            <Field value={user.age} placeholder="Âge (18+)" keyboardType="number-pad" onChangeText={(v) => setUser((s) => ({ ...s, age: v }))} />
+            <BigBtn
+              label="CRÉER MON COMPTE"
+              disabled={!canCreate}
+              onPress={() => setRoute("table")}
+            />
+            <Text
+              onPress={() =>
+                Linking.openURL("https://anishadjadjaoul2-droid.github.io/monstre-poker/privacy.html")
+              }
+              style={{ color: COLORS.muted, textAlign: "center", marginTop: 8 }}
+            >
+              En continuant vous acceptez la politique de confidentialité.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
-      const st: HandState = {
-        players: Number(players),
-        stackBB: Number(stackBB),
-        bbSize: Number(bbSize),
-        cards: cards.trim(),
-      };
-      const d = computeDecision(st);
-      setLastDecision(String(d));
-
-
-      if (!isPro) {
-        const newUsed = await incHandsUsed();
-        setHandsLeft(Math.max(0, HANDS_TRIAL - newUsed));
-      }
-    } catch (e: any) {
-      Alert.alert('Erreur', e?.message ?? 'Calcul impossible');
-    } finally {
-      setLoading(false);
-    }
-  }, [players, stackBB, bbSize, cards, isPro, openPaywall]);
-
-  // Écran d’auth si pas connecté
-  if (!sessionReady) return null;
-if (!userId) return <AuthScreen onDone={async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  setUserId(session?.user?.id ?? null);
-}} />;
-
-// Ici on affiche la table simple
-return <TableScreen />;
-
+  // ROUTE = TABLE
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 22, fontWeight: '700' }}>Monstre Poker</Text>
-      <Text style={{ opacity: 0.6 }}>
-        {isPro ? 'PRO illimité' : `Essai : ${handsLeft} main${handsLeft>1?'s':''} restantes`}
-      </Text>
-
-      <Text>Joueurs (2–6)</Text>
-      <TextInput value={players} onChangeText={setPlayers} style={styles.input} keyboardType="number-pad" />
-
-      <Text>Stack (BB)</Text>
-      <TextInput value={stackBB} onChangeText={setStackBB} style={styles.input} keyboardType="number-pad" />
-
-      <Text>Taille de la BB</Text>
-      <TextInput value={bbSize} onChangeText={setBbSize} style={styles.input} keyboardType="number-pad" />
-
-      <Text>Cartes (ex: Ah7s)</Text>
-      <TextInput value={cards} onChangeText={setCards} style={styles.input} autoCapitalize="none" />
-
-      <Pressable onPress={decide} disabled={isLoading} style={styles.btn}>
-        <Text style={styles.btnTxt}>{isLoading ? 'Calcul…' : 'Décider cette main'}</Text>
-      </Pressable>
-
-      {!isPro && (
-        <Pressable onPress={openPaywall} style={styles.btnOutline}>
-          <Text style={styles.btnOutlineTxt}>Débloquer illimité</Text>
-        </Pressable>
-      )}
-
-      {lastDecision ? (
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ fontWeight: '700' }}>Décision :</Text>
-          <Text>{lastDecision}</Text>
-        </View>
-      ) : null}
-
-      <Text style={{ marginTop: 24, opacity: 0.6 }}>
-        ⚠️ Outil d’entraînement. Aucun lien avec les jeux d’argent réels.
-      </Text>
-    </ScrollView>
+    <TableScreen
+      theme={COLORS}
+      isPro={isPro}
+      handsUsed={handsUsed}
+      onUseHand={() => setHandsUsed((n) => n + 1)}
+      onBuyPro={() => setIsPro(true)}
+      onLogout={() => {
+        setRoute("auth");
+        setIsPro(false);
+        setHandsUsed(0);
+      }}
+    />
   );
 }
 
-const styles = {
-  input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 10, borderRadius: 10 },
-  btn: { backgroundColor: '#111827', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  btnTxt: { color: 'white', fontWeight: '700' },
-  btnOutline: { borderWidth: 2, borderColor: '#111827', paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  btnOutlineTxt: { color: '#111827', fontWeight: '700' },
-} as const;
+// ———————————————————————— UI helpers ————————————————————————
+function PillBtn({
+  label,
+  onPress,
+  inverted,
+}: {
+  label: string;
+  onPress: () => void;
+  inverted?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: inverted ? COLORS.white : COLORS.green,
+        borderRadius: 24,
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        borderWidth: inverted ? 2 : 0,
+        borderColor: COLORS.teal,
+      }}
+    >
+      <Text style={{ color: inverted ? COLORS.teal : COLORS.white, fontWeight: "700" }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Field({
+  value,
+  placeholder,
+  onChangeText,
+  keyboardType,
+}: {
+  value: string;
+  placeholder: string;
+  onChangeText: (v: string) => void;
+  keyboardType?: "default" | "number-pad" | "email-address";
+}) {
+  return (
+    <View
+      style={{
+        backgroundColor: COLORS.white,
+        borderRadius: 18,
+        borderWidth: 3,
+        borderColor: COLORS.fieldBorder,
+      }}
+    >
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#A0AAB4"
+        keyboardType={keyboardType ?? "default"}
+        autoCapitalize="none"
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: Platform.select({ ios: 16, android: 12 }),
+          fontSize: 16,
+          color: COLORS.dark,
+        }}
+      />
+    </View>
+  );
+}
+
+function BigBtn({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        backgroundColor: disabled ? "#9BDDC3" : COLORS.green,
+        borderRadius: 24,
+        paddingVertical: 16,
+        alignItems: "center",
+      }}
+    >
+      <Text style={{ color: COLORS.white, fontWeight: "800", fontSize: 16 }}>{label}</Text>
+    </Pressable>
+  );
+}

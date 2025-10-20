@@ -1,171 +1,290 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import CardPicker, { PlayingCard, cardToShort } from '../components/CardPicker';
-import { computeWin, Stage, ComputeResult } from '../logic/computeWin';
+import React, { useMemo, useState } from "react";
+import { View, Text, Pressable, Modal, SafeAreaView, ScrollView, Alert } from "react-native";
+import CardPicker from "../components/CardPicker";
+import type { PlayingCard } from "../components/CardPicker";
+import { computeWin, type Stage, type ComputeResult } from "../logic/computeWin";
 
-type Seat = 2 | 3 | 4 | 5 | 6;
+// Thème depuis App.tsx
+type Theme = {
+  bg: string;
+  dark: string;
+  muted: string;
+  green: string;
+  teal: string;
+  blue: string;
+  white: string;
+  fieldBorder: string;
+};
 
-export default function TableScreen() {
-  // Sélecteur de cartes
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const [pickerSlot, setPickerSlot] = useState<{ type: 'hero' | 'board'; idx: number } | null>(null);
+type Props = {
+  theme: Theme;
+  isPro: boolean;
+  handsUsed: number;
+  onUseHand: () => void;
+  onBuyPro: () => void;
+  onLogout: () => void;
+};
 
-  // Tes cartes + board
+type Seat = { active: boolean };
+const initSeats = (): Seat[] => [{ active: true }, { active: true }, { active: true }, { active: true }];
+
+const rankLabel = (r: PlayingCard["rank"]) => (r === "T" ? "10" : r);
+const suitGlyph: Record<PlayingCard["suit"], string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
+const labelFromCard = (c: PlayingCard | null) => (c ? `${rankLabel(c.rank)}${suitGlyph[c.suit]}` : "");
+
+export default function TableScreen({
+  theme: C,
+  isPro,
+  handsUsed,
+  onUseHand,
+  onBuyPro,
+  onLogout,
+}: Props) {
+  // états cartes au format PlayingCard
   const [hero, setHero] = useState<[PlayingCard | null, PlayingCard | null]>([null, null]);
   const [board, setBoard] = useState<(PlayingCard | null)[]>([null, null, null, null, null]);
+  const [seats, setSeats] = useState<Seat[]>(initSeats());
+  const [equity, setEquity] = useState<number | null>(null);
 
-  // Joueurs 2..6 en jeu/fold (adversaires)
-  const [active, setActive] = useState<Record<Seat, boolean>>({
-    2: true, 3: true, 4: true, 5: true, 6: true,
-  });
+  // sélecteur
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSlot, setPickerSlot] = useState<"C1" | "C2" | "F1" | "F2" | "F3" | "T1" | "R1">("C1");
 
-  const leftSeats:  Seat[] = [2, 3, 4];
-  const rightSeats: Seat[] = [5, 6];
+  const oppCount = useMemo(() => seats.filter((s) => s.active).length, [seats]);
 
-  // Compteurs & étape
-  const oppCount = useMemo(() => Object.values(active).filter(Boolean).length, [active]);
-  const stage: Stage = useMemo(
-    () => (board[4] ? 'RIVER' : board[3] ? 'TURN' : board[0] ? 'FLOP' : 'PREFLOP'),
-    [board]
-  );
-
-  // Empêcher les doublons
-  const exclude = useMemo(() => {
-    const set = new Set<string>();
-    [hero[0], hero[1], ...board].forEach((c) => c && set.add(cardToShort(c)));
-    return set;
-  }, [hero, board]);
-
-  const openSlot = (type: 'hero' | 'board', idx: number) => {
-    setPickerSlot({ type, idx });
-    setPickerVisible(true);
-  };
-
-  const onPick = (c: PlayingCard) => {
-    if (!pickerSlot) return;
-    if (pickerSlot.type === 'hero') {
-      setHero((h) => {
-        const n = [...h] as [PlayingCard | null, PlayingCard | null];
-        n[pickerSlot.idx] = c;
-        return n;
-      });
-    } else {
-      setBoard((b) => {
-        const n = [...b];
-        n[pickerSlot.idx] = c;
-        return n;
-      });
+  function handlePick(c: PlayingCard) {
+    switch (pickerSlot) {
+      case "C1": setHero(([_, c2]) => [c, c2]); break;
+      case "C2": setHero(([c1, _]) => [c1, c]); break;
+      case "F1": setBoard(([_, b2, b3, t1, r1]) => [c, b2, b3, t1, r1]); break;
+      case "F2": setBoard(([b1, _, b3, t1, r1]) => [b1, c, b3, t1, r1]); break;
+      case "F3": setBoard(([b1, b2, _, t1, r1]) => [b1, b2, c, t1, r1]); break;
+      case "T1": setBoard(([b1, b2, b3, _, r1]) => [b1, b2, b3, c, r1]); break;
+      case "R1": setBoard(([b1, b2, b3, t1, _]) => [b1, b2, b3, t1, c]); break;
     }
-  };
+    setPickerOpen(false);
+  }
 
-  // Équité (Monte-Carlo exact depuis computeWin)
-  const [equity, setEquity] = useState<ComputeResult | null>(null);
+  async function doCompute() {
+    // → chaque calcul consomme 1 main d’essai si non PRO
+    if (!isPro) {
+      if (handsUsed >= 7) { setShowPaywall(true); return; }
+      onUseHand();
+    }
+    if (!hero[0] || !hero[1]) {
+      Alert.alert("Cartes manquantes", "Renseigne C1 et C2.");
+      return;
+    }
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await computeWin(hero, board, oppCount, stage);
-      if (!cancelled) setEquity(res);
-    })();
-    return () => { cancelled = true; };
-  }, [hero, board, oppCount, stage]);
+    const shown = board.filter(Boolean).length;
+    const stage: Stage = (shown >= 5 ? "river" : shown === 4 ? "turn" : shown >= 3 ? "flop" : "preflop") as Stage;
+
+    try {
+      const res: ComputeResult = await computeWin(hero, board, oppCount, stage);
+      setEquity(res.winPct);
+    } catch (e) {
+      console.warn(e);
+      Alert.alert("Calcul", "Impossible de calculer l’équité pour ce spot.");
+    }
+  }
+
+  // RESET = nouvelle main (compte 1 main d’essai et remet tout à zéro)
+  function resetHand() {
+    if (!isPro) {
+      if (handsUsed >= 7) { setShowPaywall(true); return; }
+      onUseHand(); // ✅ considère la main comme “jouée”
+    }
+    setHero([null, null]);
+    setBoard([null, null, null, null, null]);
+    setSeats(initSeats());
+    setEquity(null);
+  }
+
+  const [showPaywall, setShowPaywall] = useState(false);
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={S.table}>
-        {/* Cartes du board */}
-        <View style={S.boardRow}>
-          {board.map((c, i) => (
-            <Pressable key={i} style={S.card} onPress={() => openSlot('board', i)}>
-              <Text style={S.cardLbl}>
-                {c ? `${c.rank}${c.suit}` : i < 3 ? `F${i + 1}` : i === 3 ? 'T1' : 'R1'}
-              </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Header */}
+      <View style={{ height: 80, backgroundColor: C.white, justifyContent: "center", paddingHorizontal: 16 }}>
+        <Text style={{ color: C.dark, fontSize: 18, fontWeight: "700" }}>Table d'entraînement</Text>
+        <View style={{ position: "absolute", right: 16, top: 22, backgroundColor: "#E8F5EF", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
+          <Text style={{ color: C.green, fontWeight: "700" }}>
+            Essai : {Math.min(handsUsed, 7)} / 7 {isPro ? "• PRO" : ""}
+          </Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {/* Table ovale */}
+        <View style={{ width: "100%", aspectRatio: 1.35, backgroundColor: "#029E62", borderColor: "#096A54", borderWidth: 8, borderRadius: 999, alignItems: "center", justifyContent: "center" }}>
+          {/* Board */}
+          <View style={{ flexDirection: "row", gap: 18, marginBottom: 24 }}>
+            {(["F1","F2","F3","T1","R1"] as const).map((slot, idx) => (
+              <CardBox
+                key={slot}
+                label={board[idx] ? labelFromCard(board[idx]) : slot}
+                onPress={() => { setPickerSlot(slot); setPickerOpen(true); }}
+              />
+            ))}
+          </View>
+
+          {/* Hero */}
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <CardBox label={hero[0] ? labelFromCard(hero[0]) : "C1"} onPress={() => { setPickerSlot("C1"); setPickerOpen(true); }} />
+            <CardBox label={hero[1] ? labelFromCard(hero[1]) : "C2"} onPress={() => { setPickerSlot("C2"); setPickerOpen(true); }} />
+          </View>
+        </View>
+
+        {/* Sièges */}
+        <View style={{ marginTop: 12, flexDirection: "row", justifyContent: "space-between" }}>
+          {seats.map((s, i) => (
+            <Pressable
+              key={i}
+              onPress={() =>
+                setSeats((arr) => {
+                  const cp = [...arr];
+                  cp[i] = { active: !cp[i].active };
+                  return cp;
+                })
+              }
+              style={{
+                padding: 10,
+                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: s.active ? C.fieldBorder : "#F0F0F0",
+                backgroundColor: s.active ? "#0B5C70" : "#DCE7EE",
+                minWidth: 110,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: s.active ? C.white : C.dark, fontWeight: "700" }}>Joueur {i + 2}</Text>
+              <Text style={{ color: s.active ? C.white : C.muted, fontSize: 12 }}>{s.active ? "En jeu" : "Fold"}</Text>
             </Pressable>
           ))}
         </View>
 
-        {/* États des sièges */}
-        <View style={S.seatsRow}>
-          {leftSeats.map((s) => (
-            <SeatToggle
-              key={s}
-              seat={s}
-              value={active[s]}
-              onChange={(v) => setActive((a) => ({ ...a, [s]: v }))}
-            />
-          ))}
-          <View style={{ flex: 1 }} />
-          {rightSeats.map((s) => (
-            <SeatToggle
-              key={s}
-              seat={s}
-              value={active[s]}
-              onChange={(v) => setActive((a) => ({ ...a, [s]: v }))}
-            />
-          ))}
+        {/* Résumé/équité */}
+        <View style={{ marginTop: 20, borderRadius: 16, borderColor: C.fieldBorder, borderWidth: 2, backgroundColor: C.white, padding: 16 }}>
+          <Text style={{ color: C.dark, fontWeight: "700", fontSize: 16 }}>
+            Équité estimée : {equity == null ? "--" : `${equity.toFixed(0)} %`}
+          </Text>
+          <Text style={{ color: C.muted, marginTop: 8, fontSize: 12 }}>Outil éducatif. Aucun jeu d’argent réel.</Text>
         </View>
 
-        {/* Tes cartes */}
-        <View style={S.heroRow}>
-          <Text style={{ marginRight: 12 }}>Joueur 1 :</Text>
-          {[0, 1].map((i) => (
-            <Pressable key={i} style={S.cardHero} onPress={() => openSlot('hero', i)}>
-              <Text style={S.cardLbl}>
-                {hero[i] ? `${hero[i]!.rank}${hero[i]!.suit}` : i === 0 ? 'C1' : 'C2'}
-              </Text>
+        {/* Actions */}
+        <View style={{ marginTop: 16, flexDirection: "row", gap: 12 }}>
+          <BigBtn label="Choisir cartes" color={C.blue} onPress={() => { setPickerSlot("C1"); setPickerOpen(true); }} />
+          <BigBtn label="Calculer l'équité" color={C.green} onPress={doCompute} />
+        </View>
+        <View style={{ marginTop: 10 }}>
+          <GhostBtn label="Nouvelle main (Reset)" onPress={resetHand} />
+        </View>
+
+        <Pressable onPress={onLogout} style={{ marginTop: 12 }}>
+          <Text style={{ color: C.muted, textAlign: "center" }}>Se déconnecter</Text>
+        </Pressable>
+      </ScrollView>
+
+      {/* Paywall */}
+      <Modal visible={showPaywall} transparent animationType="slide" onRequestClose={() => setShowPaywall(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <View style={{ backgroundColor: C.white, borderRadius: 18, padding: 20, width: "100%" }}>
+            <View style={{ backgroundColor: C.dark, borderRadius: 12, padding: 16 }}>
+              <Text style={{ color: C.white, fontWeight: "800", fontSize: 22 }}>Accès PRO à vie</Text>
+            </View>
+            <Text style={{ marginTop: 14, color: C.dark, fontSize: 16 }}>Essai terminé — 7/7 mains utilisées</Text>
+
+            {[
+              "Équité illimitée, préflop → river",
+              "Aucune publicité",
+              "Achat unique — pas d’abonnement",
+            ].map((b, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
+                <Text style={{ color: C.dark }}>{b}</Text>
+              </View>
+            ))}
+
+            <View style={{ marginTop: 14, borderRadius: 12, borderColor: C.fieldBorder, borderWidth: 2, padding: 12 }}>
+              <Text style={{ color: C.dark, fontWeight: "700" }}>Prix : 29,99 € (TTC) • Achats Google Play</Text>
+            </View>
+
+            <Pressable
+              onPress={() => { setShowPaywall(false); onBuyPro(); }}
+              style={{ marginTop: 12, backgroundColor: C.green, borderRadius: 24, paddingVertical: 14, alignItems: "center" }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800" }}>Débloquer l'accès PRO</Text>
             </Pressable>
-          ))}
+
+            <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 12, alignItems: "center" }}>
+              <Text style={{ color: C.muted }}>Plus tard</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </Modal>
 
-      <View style={S.infoBar}>
-        <Text style={{ fontWeight: '700' }}>Étape : {stage}</Text>
-        <Text>Adversaires actifs : {oppCount}</Text>
-        <Text>
-          {equity?.status === 'ok'
-            ? `Équité estimée : ${equity.winPct.toFixed(1)} %  (ties ~ ${equity.tiePct.toFixed(1)} %, n=${equity.samples})`
-            : 'Équité : —'}
-        </Text>
-      </View>
-
+      {/* CardPicker */}
       <CardPicker
-        visible={pickerVisible}
-        onClose={() => setPickerVisible(false)}
-        onPick={onPick}
-        exclude={exclude}
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={handlePick}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-function SeatToggle({
-  seat, value, onChange,
-}: {
-  seat: Seat;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
+// —————————————————————— UI locaux ——————————————————————
+function CardBox({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={() => onChange(!value)} style={[S.seatBtn, !value && S.seatOff]}>
-      <Text>Joueur {seat}</Text>
-      <Text style={{ fontSize: 12, opacity: 0.7 }}>{value ? 'En jeu' : 'Fold'}</Text>
+    <Pressable
+      onPress={onPress}
+      style={{
+        width: 70,
+        height: 100,
+        backgroundColor: "#1A4E60",
+        borderColor: "#082F49",
+        borderWidth: 3,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ color: "#ffffff", fontWeight: "800" }}>{label}</Text>
     </Pressable>
   );
 }
 
-const S = StyleSheet.create({
-  table:   { margin: 16, padding: 16, borderWidth: 2, borderColor: '#0a8f4a',
-             backgroundColor: '#06b862', borderRadius: 240 },
-  boardRow:{ flexDirection: 'row', justifyContent: 'space-evenly', marginVertical: 24 },
-  heroRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12 },
-  card:    { width: 56, height: 84, backgroundColor: '#17485A', borderRadius: 6,
-             alignItems: 'center', justifyContent: 'center' },
-  cardHero:{ width: 64, height: 96, backgroundColor: '#17485A', borderRadius: 8,
-             alignItems: 'center', justifyContent: 'center' },
-  cardLbl: { color: '#fff', fontWeight: '700' },
-  seatsRow:{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 8, gap: 8 },
-  seatBtn: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10,
-             backgroundColor: 'rgba(255,255,255,0.85)' },
-  seatOff: { backgroundColor: 'rgba(0,0,0,0.08)' },
-  infoBar: { padding: 12, borderTopWidth: 1, borderColor: '#eee', gap: 4 },
-});
+function BigBtn({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        backgroundColor: color,
+        borderRadius: 18,
+        paddingVertical: 14,
+        alignItems: "center",
+      }}
+    >
+      <Text style={{ color: "#fff", fontWeight: "800" }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function GhostBtn({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: "#E6EBF0",
+        paddingVertical: 12,
+        alignItems: "center",
+      }}
+    >
+      <Text style={{ color: "#111827", fontWeight: "800" }}>{label}</Text>
+    </Pressable>
+  );
+}
