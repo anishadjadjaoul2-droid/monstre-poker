@@ -1,19 +1,7 @@
-{
-  "cli": { "version": ">= 7.3.0", "appVersionSource": "remote" },
-  "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
-    "production":   { "android": { "buildType": "app-bundle" } }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./keys/google-play-service-account.json",
-        "track": "internal"
-      }
-    }
-  }
-}
+cd /workspaces/monstre-poker/app
 
+# Réécrit entièrement le fichier
+cat > eas.json <<'JSON'
 {
   "cli": { "version": ">= 7.3.0", "appVersionSource": "remote" },
   "build": {
@@ -30,3 +18,4 @@
     }
   }
 }
+JSON
